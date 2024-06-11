@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  
+<%- include('./Layouts/Header'); %>
+
+ 
+    <div class="row justify-content-center mt-4">
+      <div class="col-lg-8">
+        <div class="card">
+          <div class="card-header bg-primary text-white">
+            <h4>Upload your PDF files here</h4>
+          </div>
+          <div class="card-body">
+            <form action="/multiple-upload" method="POST" enctype="multipart/form-data">
+              <div class="form-group">
+                <label for="input-multi-files">Choose PDF files:</label>
+                <input type="file" name="multi-files" multiple id="input-multi-files" class="form-control-file"/>
+              </div>
+              <button type="submit" class="btn btn-primary btn-block">Submit</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- <div class="row justify-content-center mt-4">
+      <div class="col-lg-10">
+        <div class="card">
+          <div class="card-header bg-primary text-white">
+            <h4>PDF Preview</h4>
+          </div>
+          <div class="card-body" id="pdf-preview-container">
+     PDF previews will be inserted here -->
+          <!-- </div>
+        </div>
+      </div> -->
+    <!-- </div> --> 
+ 
+    <%- include('./Layouts/Footer'); %>

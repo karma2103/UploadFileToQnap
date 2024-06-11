@@ -1,0 +1,65 @@
+<div class="footer text-center mt-4">
+    <p>&copy; 2024 Bhutan Insurance Limited. All rights reserved.</p>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<!-- <script>
+  function previewPDFs(input) {
+    if (input.files) {
+      const pdfPreviewContainer = document.getElementById('pdf-preview-container');
+      pdfPreviewContainer.innerHTML = ''; 
+
+      for (let i = 0; i < input.files.length; i++) {
+        const file = input.files[i];
+        const fileReader = new FileReader();
+        fileReader.onload = function(event) {
+          const pdfData = new Uint8Array(event.target.result);
+          const loadingTask = pdfjsLib.getDocument({data: pdfData});
+          loadingTask.promise.then(function(pdf) {
+            pdf.getPage(1).then(function(page) {
+              const canvas = document.createElement('canvas');
+              const context = canvas.getContext('2d');
+              const viewport = page.getViewport({ scale: 0.5 });
+              canvas.height = viewport.height;
+              canvas.width = viewport.width;
+              const renderContext = {
+                canvasContext: context,
+                viewport: viewport
+              };
+              page.render(renderContext).promise.then(function() {
+                pdfPreviewContainer.appendChild(canvas);
+              });
+            });
+          });
+        };
+        fileReader.readAsArrayBuffer(file);
+      }
+    }
+  }
+
+  document.getElementById('input-multi-files').addEventListener('change', function() {
+    previewPDFs(this);
+  });
+  document.getElementById('upload-form').addEventListener('submit', function(event) {
+    event.preventDefault();
+    const formData = new FormData(this);
+    $.ajax({
+      url: '/multiple-upload',
+      type: 'POST',
+      data: formData,
+      processData: false,
+      contentType: false,
+      success: function(response) {
+        toastr.success(response.message);
+      },
+      error: function(xhr) {
+        toastr.error(xhr.responseJSON ? xhr.responseJSON.message : 'Error occurred while uploading files.');
+      }
+    });
+  });
+</script> -->
+

@@ -1,38 +1,171 @@
-<!DOCTYPE html>
-<html lang="en">
-  
 <%- include('./Layouts/Header'); %>
+  <style>
+    .drag-drop-area {
+      border: 2px dashed #007bff;
+      border-radius: 4px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+    }
 
- 
-    <div class="row justify-content-center mt-4">
-      <div class="col-lg-8">
-        <div class="card">
-          <div class="card-header bg-primary text-white">
-            <h4>Upload your PDF files here</h4>
-          </div>
-          <div class="card-body">
-            <form action="/multiple-upload" method="POST" enctype="multipart/form-data">
-              <div class="form-group">
-                <label for="input-multi-files">Choose PDF files:</label>
-                <input type="file" name="multi-files" multiple id="input-multi-files" class="form-control-file"/>
-              </div>
-              <button type="submit" class="btn btn-primary btn-block">Submit</button>
-            </form>
-          </div>
-        </div>
+    .drag-drop-area.dragover {
+      background-color: #e9ecef;
+    }
+  </style>
+  </head>
+
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ml-auto">
+          <% if (user) { %>
+            <li class="nav-item">
+              <a class="nav-link" href="#">Welcome, <%= user.username %></a>
+            </li>
+            <li class="nav-item">
+              <form action="/logout" method="GET" style="display: inline;">
+                <button type="submit" class="btn btn-link nav-link" style="display: inline; cursor: pointer;">Logout</button>
+              </form>
+            </li>
+          <% } else { %>
+            <li class="nav-item">
+              <a class="nav-link" href="/login">Login</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/register">Register</a>
+            </li>
+          <% } %>
+        </ul>
       </div>
-    </div>
-    <!-- <div class="row justify-content-center mt-4">
-      <div class="col-lg-10">
-        <div class="card">
-          <div class="card-header bg-primary text-white">
-            <h4>PDF Preview</h4>
-          </div>
-          <div class="card-body" id="pdf-preview-container">
-     PDF previews will be inserted here -->
-          <!-- </div>
+    </nav>
+    
+    <div class="container mt-5">
+      <h1 class="mb-4" style="font-family: Georgia, 'Times New Roman', Times, serif;">Upload Files or Folder</h1>
+      <form action="/multiple-upload" method="POST" enctype="multipart/form-data" class="form">
+        <div class="form-group">
+          <label for="uploadType">Choose Files or Folder to Upload: </label>
+          <select name="uploadType" id="uploadType" name="uploadType" class="form-control" onchange="toggleUploadType()">
+            <option value="Files">Files</option>
+            <option value="Folder">Folder</option>
+          </select>
         </div>
-      </div> -->
-    <!-- </div> --> 
- 
-    <%- include('./Layouts/Footer'); %>
+
+        <div id="filesInput" class="form-group" style="display: block;">
+          <label for="input-multi-files">Choose Files:</label>
+          <div class="drag-drop-area" id="filesDragDropArea">
+            Drag & Drop Files Here or Click to Select
+          </div>
+          <input type="file" name="multi-files" id="input-multi-files" class="form-control-file" multiple style="display:none;">
+        </div>
+
+        <div id="folderInput" class="form-group" style="display: none;">
+          <label for="folder">Select Folder:</label>
+          <div class="drag-drop-area" id="folderDragDropArea">
+            Drag & Drop Folder Here or Click to Select
+          </div>
+          <input type="file" name="folder" id="folder" class="form-control-file" webkitdirectory multiple style="display:none;">
+          <label for="folderName" class="mt-2">Folder Name:</label>
+          <input type="text" name="folderName" id="folderName" class="form-control" placeholder="Enter the name you want to save your folder as:" autocomplete="off">
+        </div>
+
+        <button type="submit" class="btn btn-primary mt-3">Upload</button>
+      </form>
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+      function toggleUploadType() {
+        const uploadType = document.getElementById('uploadType').value;
+        const filesInput = document.getElementById('filesInput');
+        const folderInput = document.getElementById('folderInput');
+
+        if (uploadType === 'Files') {
+          filesInput.style.display = 'block';
+          folderInput.style.display = 'none';
+        } else {
+          filesInput.style.display = 'none';
+          folderInput.style.display = 'block';
+        }
+      }
+
+      function handleFiles(files, dropArea) {
+        const fileList = Array.from(files);
+        const fileNames = fileList.map(file => `<div>${file.name}</div>`).join('');
+        dropArea.innerHTML = fileNames;
+      }
+
+      // Drag and drop functionality for files
+      const filesDragDropArea = document.getElementById('filesDragDropArea');
+      const filesInput = document.getElementById('input-multi-files');
+
+      filesDragDropArea.addEventListener('click', function () {
+        filesInput.click();
+      });
+
+      filesInput.addEventListener('change', function () {
+        handleFiles(filesInput.files, filesDragDropArea);
+      });
+
+      filesDragDropArea.addEventListener('dragover', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.target.classList.add('dragover');
+      });
+
+      filesDragDropArea.addEventListener('dragleave', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.target.classList.remove('dragover');
+      });
+
+      filesDragDropArea.addEventListener('drop', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.target.classList.remove('dragover');
+
+        filesInput.files = event.dataTransfer.files;
+        handleFiles(filesInput.files, filesDragDropArea);
+      });
+
+      // Drag and drop functionality for folder
+      const folderDragDropArea = document.getElementById('folderDragDropArea');
+      const folderInput = document.getElementById('folder');
+
+      folderDragDropArea.addEventListener('click', function () {
+        folderInput.click();
+      });
+
+      folderInput.addEventListener('change', function () {
+        handleFiles(folderInput.files, folderDragDropArea);
+        const folderName = folderInput.files[0].webkitRelativePath.split('/')[0];
+        document.getElementById('folderName').value = folderName;
+      });
+
+      folderDragDropArea.addEventListener('dragover', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.target.classList.add('dragover');
+      });
+
+      folderDragDropArea.addEventListener('dragleave', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.target.classList.remove('dragover');
+      });
+
+      folderDragDropArea.addEventListener('drop', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.target.classList.remove('dragover');
+
+        folderInput.files = event.dataTransfer.files;
+        handleFiles(folderInput.files, folderDragDropArea);
+        const folderName = folderInput.files[0].webkitRelativePath.split('/')[0];
+        document.getElementById('folderName').value = folderName;
+      });
+    </script>
+<%- include('./Layouts/Footer'); %>

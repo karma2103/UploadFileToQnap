@@ -5,9 +5,26 @@ const fileSchema = new mongoose.Schema({
   originalname: String,
   mimetype: String,
   size: Number,
-  date: { type: Date, default: Date.now }
+  date: { type: Date, default: Date.now },
+  uploadedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  }
 });
 
-const FileModel = mongoose.model('File', fileSchema);
+const folderSchema = new mongoose.Schema({
+  folderName: String,
+  files: [fileSchema],
+  uploadType: { type: String, default: 'Folder' },
+  date: { type: Date, default: Date.now },
+  uploadedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  }
+});
 
-module.exports = FileModel;
+const FolderModel = mongoose.model('Folder', folderSchema);
+
+module.exports = FolderModel;

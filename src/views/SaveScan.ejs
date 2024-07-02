@@ -1,71 +1,193 @@
-<%- include('./Layouts/Header'); %>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Uploaded Files</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    /* Custom Styles for Dropdown */
+    .custom-dropdown {
+      position: relative;
+      display: inline-block;
+    }
 
-<div class="container mt-5">
-  <div class="row mb-4">
-    <div class="col-md-6">
-      <h1>Uploaded Files</h1>
-    </div>
-    <div class="col-md-6 text-right">
-      <div class="input-group">
-        <input type="text" id="searchInput" class="form-control" placeholder="Search...">
-        <div class="input-group-append">
-          <button class="btn btn-primary" onclick="searchFiles()">Search</button>
+    .custom-dropdown .dropdown-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      z-index: 1000;
+    }
+
+    .custom-dropdown.show .dropdown-menu {
+      display: block;
+    }
+
+    /* Additional Styles */
+    .folder-row i {
+      color: #007bff;
+    }
+
+    .file-row i {
+      color: #6c757d;
+    }
+  </style>
+</head>
+<body>
+  <%- include('./Layouts/Header'); %>
+
+  <div class="container mt-5">
+    <div class="row mb-4">
+      <div class="col-md-6">
+        <h1 style="font-family: Georgia, 'Times New Roman', Times, serif;">Uploaded Files</h1>
+      </div>
+      <div class="col-md-6 text-right">
+        <div class="input-group">
+          <input type="text" id="searchInput" class="form-control" placeholder="Search...">
+          <div class="input-group-append">
+            <button class="btn btn-primary" onclick="searchFiles()">Search</button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-  <div class="table-responsive">
-    <table class="table table-bordered">
-      <thead class="thead-light">
-        <tr>
-          <th>SI No</th>
-          <th>Original Name</th>
-          <th>File Name</th>
-          <th>Upload Date</th>
-          <th>View Link</th>
-          <!-- <th>Delete</th> -->
-        </tr>
-      </thead>
-      <tbody>
-        <% files.forEach((file, index) => { %>
+    <div class="row mb-4">
+      <div class="col-md-12 text-right">
+        <!-- Custom Dropdown -->
+        <div class="custom-dropdown">
+          <button type="button" class="btn btn-secondary dropdown-toggle" aria-haspopup="true" aria-expanded="false"
+            onclick="toggleDropdown('filterDropdown')">
+            Filter Files
+          </button>
+          <div class="dropdown-menu" id="filterDropdown">
+            <a class="dropdown-item" href="#" onclick="filterFiles('all'); toggleDropdown('filterDropdown')">All Files</a>
+            <a class="dropdown-item" href="#" onclick="filterFiles('individual'); toggleDropdown('filterDropdown')">Individual Files</a>
+            <a class="dropdown-item" href="#" onclick="filterFiles('department'); toggleDropdown('filterDropdown')">Department Files</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-bordered">
+        <thead class="thead-light">
           <tr>
-            <td><%= (currentPage - 1) * 10 + index + 1 %></td>
-            <td><%= file.originalname %></td>
-            <td><%= file.filename %></td>
-            <td><%= new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(file.date)) %></td>
-            <td><a href="/uploads/<%= file.filename %>" target="_blank" class="btn btn-primary btn-sm">View</a></td>
-            <!-- <td>
-              <button onclick="deleteFile('<%= file.filename %>')">Delete</button>
-            </td> -->
+            <th>SI No</th>
+            <th>File Name</th>
+            <th>Upload Date</th>
+            <th>Uploaded By</th>
+            <th>File Size</th>
+            <th>Department</th>
           </tr>
-        <% }); %>
-      </tbody>
-    </table>
+        </thead>
+        <tbody id="fileTableBody">
+          <% if (files.length > 0) { %>
+            <% files.forEach((file, index) => { %>
+              <tr class="<%= file.uploadType === 'Folder' ? 'folder-row' : 'file-row' %>"
+                data-type="<%= file.uploadedBy && file.uploadedBy._id.toString() === loggedInUserId ? 'individual' : 'department' %>">
+                <td>
+                  <%= (currentPage - 1) * limit + index + 1 %>
+                </td>
+                <td>
+                  <% if (file.uploadType === 'Folder') { %>
+                    <i class="fas fa-folder"></i> <%= file.folderName %>
+                  <% } else { %>
+                    <i class="fas fa-file"></i> <%= file.originalname %>
+                  <% } %>
+                </td>
+                <td>
+                  <%= new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(file.date)) %>
+                </td>
+                <td>
+                  <%= file.uploadedBy && file.uploadedBy.username ? file.uploadedBy.username : 'Null' %>
+                </td>
+                <td>
+                  <%= formatFileSize(file.size) %>
+                </td>
+                <td>
+                  <%= file.uploadedBy && file.uploadedBy.department ? file.uploadedBy.department : 'Null' %>
+                </td>
+              </tr>
+            <% }); %>
+          <% } else { %>
+            <tr>
+              <td colspan="6" class="text-center">No files have been uploaded.</td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+    <nav aria-label="Page navigation">
+      <ul class="pagination">
+        <% for (let i = 1; i <= totalPages; i++) { %>
+          <li class="page-item <%= currentPage === i ? 'active' : '' %>">
+            <a class="page-link" href="?page=<%= i %>&limit=<%= limit %>">
+              <%= i %>
+            </a>
+          </li>
+        <% } %>
+      </ul>
+    </nav>
   </div>
-  <nav aria-label="Page navigation">
-    <ul class="pagination">
-      <% for(let i = 1; i <= totalPages; i++) { %>
-        <li class="page-item <%= currentPage === i ? 'active' : '' %>">
-          <a class="page-link" href="?page=<%= i %>&limit=<%= limit %>"><%= i %></a>
-        </li>
-      <% } %>
-    </ul>
-  </nav>
-</div>
+  <script>
+    function searchFiles() {
+      const searchInput = document.getElementById('searchInput').value.trim().toLowerCase();
+      const rows = document.querySelectorAll('#fileTableBody .file-row');
+      rows.forEach(row => {
+        const fileName = row.cells[1].textContent.trim().toLowerCase();
+        if (fileName.includes(searchInput)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
 
-<script>
-  function searchFiles() {
-    const searchInput = document.getElementById('searchInput').value.trim().toLowerCase();
-    const rows = document.querySelectorAll('tbody tr');
-    rows.forEach(row => {
-      const fileName = row.cells[2].textContent.trim().toLowerCase();
-      if (fileName.includes(searchInput)) {
-        row.style.display = '';
-      } else {
-        row.style.display = 'none';
+    function toggleDropdown(id) {
+      const dropdown = document.getElementById(id);
+      dropdown.classList.toggle('show');
+    }
+
+    function filterFiles(type) {
+      const rows = document.querySelectorAll('#fileTableBody .file-row');
+      let anyFileDisplayed = false;
+      rows.forEach(row => {
+        const dataType = row.getAttribute('data-type');
+        if (type === 'all') {
+          row.style.display = '';
+          anyFileDisplayed = true;
+        } else if (type === 'individual') {
+          if (dataType === 'individual') {
+            row.style.display = '';
+            anyFileDisplayed = true;
+          } else {
+            row.style.display = 'none';
+          }
+        } else if (type === 'department') {
+          if (dataType === 'department') {
+            row.style.display = '';
+            anyFileDisplayed = true;
+          } else {
+            row.style.display = 'none';
+          }
+        }
+      });
+
+      checkIfNoFilesDisplayed(anyFileDisplayed);
+    }
+
+    function checkIfNoFilesDisplayed(anyFileDisplayed) {
+      const noFilesRow = document.querySelector('#fileTableBody .no-files-row');
+      if (!anyFileDisplayed) {
+        if (!noFilesRow) {
+          const noFilesRowHtml = '<tr class="no-files-row"><td colspan="6" class="text-center">No files have been uploaded.</td></tr>';
+          document.getElementById('fileTableBody').insertAdjacentHTML('beforeend', noFilesRowHtml);
+        } else {
+          noFilesRow.style.display = '';
+        }
+      } else if (noFilesRow) {
+        noFilesRow.style.display = 'none';
       }
-    });
-  }
-</script>
-
-<%- include('./Layouts/Footer'); %>
+    }
+  </script>
+  <%- include('./Layouts/Header'); %>

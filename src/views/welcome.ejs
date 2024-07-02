@@ -1,0 +1,29 @@
+<%- include('./Layouts/Header'); %>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h4>Choose Your Department/Section</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label for="departmentSelect">Select Department/Section:</label>
+                            <select class="form-control" id="departmentSelect">
+                                <option value="">Select Department/Section</option>
+                                <option value="it">UnderWriting Section</option>
+                                <option value="hr">Finance Department</option>
+                                <option value="finance">Claims Section</option>
+                                <option value="finance">PF/GF Department</option>
+                                <option value="finance">Invetment Department</option>
+
+                            </select>
+
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Submit</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>  
+<%- include('./Layouts/Footer'); %>

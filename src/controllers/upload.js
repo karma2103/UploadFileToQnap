@@ -1,16 +1,17 @@
-const upload = require("../middleware/upload");
-const FileModel = require("../model/File")
+const handleFileUpload = require("../middleware/upload");
+const FolderModel = require("../model/File")
+const UserModel = require("../model/users")
 const path = require('path')
+const ftp = require('basic-ftp');
+const fs = require('fs');
+const { Readable } = require('stream');
+require('dotenv').config()
+
+
+
 const multipleUpload = async (req, res) => {
   try {
-    await upload(req, res);
-    console.log(req.files);
-
-    if (req.files.length <= 0) {
-      return res.status(400).json({ message: 'You must select at least 1 file.' });
-    }
-
-    return res.redirect('/viewSave')
+    await handleFileUpload(req, res);
   } catch (error) {
     console.log(error);
 
@@ -21,79 +22,132 @@ const multipleUpload = async (req, res) => {
   }
 };
 
+const formatFileSize = (size) => {
+  if (size === 0) return '0 Bytes';
+  const units = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(size) / Math.log(1024));
+  return parseFloat((size / Math.pow(1024, i)).toFixed(2)) + ' ' + units[i];
+};
+
+// // Inside your route handler or middleware
+// const getScan = async (req, res) => {
+//   try {
+//     const page = parseInt(req.query.page) || 1;
+//     const limit = parseInt(req.query.limit) || 10;
+//     const skip = (page - 1) * limit;
+
+//     const loggedInUserId = req.session.userId;
+//     const user = await UserModel.findById(loggedInUserId);
+//     if (!user) {
+//       req.flash('error', 'User not found.');
+//       return res.redirect('/upload');
+//     }
+
+//     const loggedInUserDepartment = user.department;
+
+//     const usersInSameDepartment = await UserModel.find({
+//       department: loggedInUserDepartment,
+//       _id: { $ne: loggedInUserId }
+//     });
+
+//     const userIdsInSameDepartment = usersInSameDepartment.map((user) => user._id);
+
+//     const files = await FileModel.find({
+//       $or: [{ uploadedBy: loggedInUserId }, { uploadedBy: { $in: userIdsInSameDepartment } }]
+//     })
+//       .populate('uploadedBy', 'username department')
+//       .skip(skip)
+//       .limit(limit);
+
+//     const count = await FileModel.countDocuments({
+//       $or: [{ uploadedBy: loggedInUserId }, { uploadedBy: { $in: userIdsInSameDepartment } }]
+//     });
+//     const totalPages = Math.ceil(count / limit);
+
+//     // Render the view and pass formatFileSize as a local variable
+//     return res.render('SaveScan', {
+//       limit,
+//       files,
+//       currentPage: page,
+//       totalPages,
+//       loggedInUserId,
+//       formatFileSize 
+//     });
+//   } catch (err) {
+//     console.error('Error fetching files:', err);
+//     res.status(500).json({ error: 'Internal Server Error' });
+//   }
+// };
 const getScan = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const files = await FileModel.find().skip(skip).limit(limit);
-    const count = await FileModel.countDocuments();
+    const loggedInUserId = req.session.userId;
+    const user = await UserModel.findById(loggedInUserId);
+    if (!user) {
+      req.flash('error', 'User not found.');
+      return res.redirect('/upload');
+    }
 
+    const loggedInUserDepartment = user.department;
+
+    const usersInSameDepartment = await UserModel.find({
+      department: loggedInUserDepartment,
+      _id: { $ne: loggedInUserId }
+    });
+
+    const userIdsInSameDepartment = usersInSameDepartment.map((user) => user._id);
+
+    // Fetch folders and populate 'files' array within each folder
+    const folders = await FolderModel.find({
+      $or: [{ uploadedBy: loggedInUserId }, { uploadedBy: { $in: userIdsInSameDepartment } }]
+    })
+      .populate({
+        path: 'files', // Assuming 'files' is the array containing individual files
+        select: 'originalname size date', // Select only necessary fields
+      })
+      .populate('uploadedBy', 'username department')
+      .skip(skip)
+      .limit(limit);
+
+    const count = await FolderModel.countDocuments({
+      $or: [{ uploadedBy: loggedInUserId }, { uploadedBy: { $in: userIdsInSameDepartment } }]
+    });
     const totalPages = Math.ceil(count / limit);
 
     return res.render('SaveScan', {
       limit,
-      files,
+      files: folders, // Pass folders data to the template
       currentPage: page,
-      totalPages
+      totalPages,
+      loggedInUserId,
+      formatFileSize,
+      user
     });
   } catch (err) {
     console.error('Error fetching files:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
-const downloadFile = async (req, res) => {
+const getFolderContents = async (req, res) => {
   try {
-    const file = await FileModel.findById(req.params.id);
-    if (!file) {
-      return res.status(404).json({ message: 'File not found' });
+    const folderId = req.params.folderId;
+    const folder = await FolderModel.findById(folderId).populate('files.uploadedBy', 'username department');
+
+    if (!folder) {
+      return res.status(404).json({ error: 'Folder not found' });
     }
-    const filePath = path.join(__dirname, '../../upload', file.filename);
-    res.download(filePath, file.originalname);
+
+    return res.json({ folder });
   } catch (err) {
-    console.error('Error downloading file:', err);
+    console.error('Error fetching folder contents:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
-
-// const viewFile = async (req, res) => {
-//   try {
-//     const file = await FileModel.findById(req.params.id);
-//     if (!file) {
-//       return res.status(404).json({ message: 'File not found' });
-//     }
-//     const filePath = path.join(__dirname, '../../upload', file.filename);
-//     res.sendFile(filePath);
-//   } catch (err) {
-//     console.error('Error viewing file:', err);
-//     res.status(500).json({ error: 'Internal Server Error' });
-//   }
-// };
-// const deleteFile = async (req, res) => {
-//   try {
-//     const file = await FileModel.findById(req.params.id);
-//     if (!file) {
-//       return res.status(404).json({ message: 'File not found' });
-//     }
-
-//     // Delete file from local storage
-//     const filePath = path.join(__dirname, '../../upload', file.filename);
-//     await fs.unlink(filePath);
-
-//     // Delete file from database
-//     await FileModel.findByIdAndDelete(fileId);
-
-//     res.status(200).json({ message: 'File deleted successfully' });
-//   } catch (err) {
-//     console.error('Error deleting file:', err);
-//     res.status(500).json({ error: 'Internal Server Error' });
-//   }
-// };
 module.exports = {
   multipleUpload,
-  getScan, 
-  downloadFile,
-  // deleteFile
-  // viewFile
+  getScan,
+  getFolderContents
 };

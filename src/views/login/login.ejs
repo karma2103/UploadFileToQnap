@@ -1,0 +1,62 @@
+<%- include('../Layouts/Header'); %>
+
+  <div class="container mt-1 col-lg-8">
+    <% if (messages.success) { %>
+      <div id="success-message" class="alert alert-success">
+        <%= messages.success %>
+      </div>
+      <script>
+        // Automatically hide the success message after 2000 milliseconds (2 seconds)
+        setTimeout(function () {
+          var successMessage = document.getElementById('success-message');
+          if (successMessage) {
+            successMessage.style.display = 'none';
+          }
+        }, 2000);
+      </script>
+      <% } %>
+
+        <% if (messages.error) { %>
+          <div id="error-message" class="alert alert-danger">
+            <%= messages.error %>
+          </div>
+          <script>
+            // Automatically hide the success message after 2000 milliseconds (2 seconds)
+            setTimeout(function () {
+              var errorMessages = document.getElementById('error-message');
+              if (errorMessages) {
+                errorMessages.style.display = 'none';
+              }
+            }, 2000);
+          </script>
+          <% } %>
+  </div>
+  <div class="container mt-5">
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header bg-primary text-white">
+            <h4>Login</h4>
+          </div>
+          <div class="card-body">
+            <form action="/login" method="POST">
+              <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="text" id="email" name="email" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" class="form-control" required>
+              </div>
+              <button type="submit" class="btn btn-primary btn-block">Login</button>
+            </form>
+            <div class="text-center mt-3">
+              <a href="/register" class="btn btn-secondary btn-block">Register</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%- include('../Layouts/Footer'); %>

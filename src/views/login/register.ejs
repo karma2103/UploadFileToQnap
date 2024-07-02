@@ -1,0 +1,51 @@
+<%- include('../Layouts/Header'); %>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header bg-primary text-white">
+            <h4>Register</h4>
+          </div>
+          <div class="card-body">
+            <form action="/registerUser" method="POST">
+              <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label for="departmentSelect" name = "department">Choose Department/Section:</label>
+                <select class="form-control" name="department" id="departmentSelect">
+                  <option value="">Select Department/Section</option>
+                  <option value="underwriting">UnderWriting Section</option>
+                  <option value="finance">Finance Department</option>
+                  <option value="claims">Claims Section</option>
+                  <option value="pf_gf">PF/GF Department</option>
+                  <option value="loan">Investment Department</option>
+              </select>
+            </div>
+              <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label for="ConfirmPassword">Confirm Password:</label>
+                <input type="password" id="ConfirmPassword" name="ConfirmPassword" class="form-control" required>
+              </div>
+              
+              <button type="submit" class="btn btn-primary btn-block">Register</button>
+            </form>
+            <div class="text-center mt-3">
+              <a href="/login" class="btn btn-secondary btn-block">Login</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+
+  <%- include('../Layouts/Footer'); %>

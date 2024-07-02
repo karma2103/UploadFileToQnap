@@ -2,9 +2,10 @@ const express = require("express");
 const app = express();
 const initRoutes = require("./routes/web");
 const path = require('path');
-
 app.use(express.urlencoded({ extended: true }));
 initRoutes(app);
+
+
 
 app.set("view engine", "ejs")
 //static files

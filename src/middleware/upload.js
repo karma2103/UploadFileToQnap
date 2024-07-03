@@ -150,7 +150,8 @@ const handleFileUpload = async (req, res) => {
               originalname: file.originalname,
               mimetype: file.mimetype,
               size: file.size,
-              path: remoteFileName
+              path: remoteFileName,
+              uploadedBy:userId
             });
           } catch (err) {
             throw new Error(`Failed to upload ${file.originalname}`);

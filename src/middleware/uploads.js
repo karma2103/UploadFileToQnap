@@ -186,3 +186,87 @@ const express = require('express');
 
 // module.exports = handleFileUpload; 
 
+//controller files
+
+// const downloadFile = async (req, res) => {
+//   try {
+//     const file = await FileModel.findById(req.params.id);
+//     if (!file) {
+//       return res.status(404).json({ message: 'File not found' });
+//     }
+
+//     console.log('File:', file);
+
+//     const client = new ftp.Client();
+//     try {
+//       await client.access(ftpCredentials);
+
+//       const fileName = file.originalname; // Assuming file name is stored in the originalname field
+//       const remoteFilePath = `/homes/${fileName}`;
+
+//       // Define the local directory to save the file
+//       const downloadDir = path.join(__dirname, '..', 'temp');
+
+//       // Ensure the directory exists, create it if not
+//       if (!fs.existsSync(downloadDir)) {
+//         fs.mkdirSync(downloadDir, { recursive: true });
+//       }
+
+//       const localFilePath = path.join(downloadDir, fileName);
+
+//       // Try to download the file
+//       try {
+//         await client.downloadTo(localFilePath, remoteFilePath);
+//       } catch (downloadError) {
+//         console.error('Error downloading file:', downloadError);
+//         return res.status(404).json({ message: 'File not found on FTP server' });
+//       }
+
+//       // Read the file and send it as a response
+//       const fileStream = fs.createReadStream(localFilePath);
+//       fileStream.pipe(res);
+//     } catch (err) {
+//       console.error('Error downloading file from FTP server:', err);
+//       res.status(500).json({ error: 'Internal Server Error' });
+//     } finally {
+//       client.close();
+//     }
+//   } catch (err) {
+//     console.error('Error downloading file:', err);
+//     res.status(500).json({ error: 'Internal Server Error' });
+//   }
+// };
+
+// const viewFile = async (req, res) => {
+//   try {
+//     const file = await FileModel.findById(req.params.id);
+//     if (!file) {
+//       return res.status(404).json({ message: 'File not found' });
+//     }
+//     const filePath = path.join(__dirname, '../../upload', file.filename);
+//     res.sendFile(filePath);
+//   } catch (err) {
+//     console.error('Error viewing file:', err);
+//     res.status(500).json({ error: 'Internal Server Error' });
+//   }
+// };
+// const deleteFile = async (req, res) => {
+//   try {
+//     const file = await FileModel.findById(req.params.id);
+//     if (!file) {
+//       return res.status(404).json({ message: 'File not found' });
+//     }
+
+//     // Delete file from local storage
+//     const filePath = path.join(__dirname, '../../upload', file.filename);
+//     await fs.unlink(filePath);
+
+//     // Delete file from database
+//     await FileModel.findByIdAndDelete(fileId);
+
+//     res.status(200).json({ message: 'File deleted successfully' });
+//   } catch (err) {
+//     console.error('Error deleting file:', err);
+//     res.status(500).json({ error: 'Internal Server Error' });
+//   }
+// };

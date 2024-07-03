@@ -4,15 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Uploaded Files</title>
-  <!-- Bootstrap CSS -->
   <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    /* Custom Styles for Dropdown */
+    .folder-row i {
+      color: #007bff;
+    }
+    .file-row i {
+      color: #6c757d;
+    }
     .custom-dropdown {
       position: relative;
       display: inline-block;
     }
-
     .custom-dropdown .dropdown-menu {
       display: none;
       position: absolute;
@@ -20,16 +23,12 @@
       left: 0;
       z-index: 1000;
     }
-
     .custom-dropdown.show .dropdown-menu {
       display: block;
     }
-
-    /* Additional Styles */
     .folder-row i {
       color: #007bff;
     }
-
     .file-row i {
       color: #6c757d;
     }
@@ -54,10 +53,8 @@
     </div>
     <div class="row mb-4">
       <div class="col-md-12 text-right">
-        <!-- Custom Dropdown -->
         <div class="custom-dropdown">
-          <button type="button" class="btn btn-secondary dropdown-toggle" aria-haspopup="true" aria-expanded="false"
-            onclick="toggleDropdown('filterDropdown')">
+          <button type="button" class="btn btn-secondary dropdown-toggle" aria-haspopup="true" aria-expanded="false" onclick="toggleDropdown('filterDropdown')">
             Filter Files
           </button>
           <div class="dropdown-menu" id="filterDropdown">
@@ -81,39 +78,32 @@
           </tr>
         </thead>
         <tbody id="fileTableBody">
-          <% if (files.length > 0) { %>
-            <% files.forEach((file, index) => { %>
-              <tr class="<%= file.uploadType === 'Folder' ? 'folder-row' : 'file-row' %>"
-                data-type="<%= file.uploadedBy && file.uploadedBy._id.toString() === loggedInUserId ? 'individual' : 'department' %>">
-                <td>
-                  <%= (currentPage - 1) * limit + index + 1 %>
-                </td>
-                <td>
-                  <% if (file.uploadType === 'Folder') { %>
-                    <i class="fas fa-folder"></i> <%= file.folderName %>
-                  <% } else { %>
-                    <i class="fas fa-file"></i> <%= file.originalname %>
-                  <% } %>
-                </td>
-                <td>
-                  <%= new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(file.date)) %>
-                </td>
-                <td>
-                  <%= file.uploadedBy && file.uploadedBy.username ? file.uploadedBy.username : 'Null' %>
-                </td>
-                <td>
-                  <%= formatFileSize(file.size) %>
-                </td>
-                <td>
-                  <%= file.uploadedBy && file.uploadedBy.department ? file.uploadedBy.department : 'Null' %>
-                </td>
+          <% let currentIndex = (currentPage - 1) * limit + 1; %>
+          <% folders.forEach((folder) => { %>
+            <% if (folder.uploadType === 'Folder') { %>
+              <tr class="folder-row" data-type="<%= folder.uploadedBy && folder.uploadedBy._id.toString() === loggedInUserId ? 'individual' : 'department' %>">
+                <td><%= currentIndex %></td>
+                <td><i class="fas fa-folder"></i> <a href="/folder/<%= folder._id %>"><%= folder.folderName %></a></td>
+                <td><%= new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(folder.date)) %></td>
+                <td><%= folder.uploadedBy ? folder.uploadedBy.username : 'Unknown' %></td>
+                <td><%= folder.fileCount %> items</td>
+                <td><%= folder.uploadedBy ? folder.uploadedBy.department : 'Unknown' %></td>
               </tr>
-            <% }); %>
-          <% } else { %>
-            <tr>
-              <td colspan="6" class="text-center">No files have been uploaded.</td>
-            </tr>
-          <% } %>
+              <% currentIndex++; %>
+            <% } else { %>
+              <% folder.files.forEach((file) => { %>
+                <tr class="file-row" data-type="<%= file.uploadedBy && file.uploadedBy._id.toString() === loggedInUserId ? 'individual' : 'department' %>">
+                  <td><%= currentIndex %></td>
+                  <td><i class="fas fa-file"></i> <%= file.originalname %></td>
+                  <td><%= new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(file.date)) %></td>
+                  <td><%= file.uploadedBy ? file.uploadedBy.username : 'Unknown' %></td>
+                  <td><%= formatFileSize(file.size) %></td>
+                  <td><%= file.uploadedBy ? file.uploadedBy.department : 'Unknown' %></td>
+                </tr>
+                <% currentIndex++; %>
+              <% }); %>
+            <% } %>
+          <% }); %>
         </tbody>
       </table>
     </div>
@@ -132,7 +122,7 @@
   <script>
     function searchFiles() {
       const searchInput = document.getElementById('searchInput').value.trim().toLowerCase();
-      const rows = document.querySelectorAll('#fileTableBody .file-row');
+      const rows = document.querySelectorAll('.file-row, .folder-row');
       rows.forEach(row => {
         const fileName = row.cells[1].textContent.trim().toLowerCase();
         if (fileName.includes(searchInput)) {
@@ -143,13 +133,19 @@
       });
     }
 
+    function formatFileSize(size) {
+      if (size < 1024) return size + ' B';
+      if (size < 1048576) return (size / 1024).toFixed(1) + ' KB';
+      return (size / 1048576).toFixed(1) + ' MB';
+    }
+
     function toggleDropdown(id) {
       const dropdown = document.getElementById(id);
       dropdown.classList.toggle('show');
     }
 
     function filterFiles(type) {
-      const rows = document.querySelectorAll('#fileTableBody .file-row');
+      const rows = document.querySelectorAll('.file-row, .folder-row');
       let anyFileDisplayed = false;
       rows.forEach(row => {
         const dataType = row.getAttribute('data-type');
@@ -172,7 +168,6 @@
           }
         }
       });
-
       checkIfNoFilesDisplayed(anyFileDisplayed);
     }
 
@@ -190,4 +185,5 @@
       }
     }
   </script>
-  <%- include('./Layouts/Header'); %>
+</body>
+</html>

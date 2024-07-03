@@ -21,13 +21,25 @@ const multipleUpload = async (req, res) => {
     return res.status(500).json({ message: `Error when trying to upload files: ${error.message}` });
   }
 };
-
+//for size calculation 
 const formatFileSize = (size) => {
   if (size === 0) return '0 Bytes';
   const units = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(size) / Math.log(1024));
   return parseFloat((size / Math.pow(1024, i)).toFixed(2)) + ' ' + units[i];
 };
+
+// for files counnt 
+const countFolder = ()=> {
+  const count = 0;
+  const folderData = FolderModel.find();
+  folderData.forEach(folderElement => {
+    if(folderElement.uploadType == 'Folder' ) {
+      count ++;
+    }
+  });
+  
+} 
 
 // // Inside your route handler or middleware
 // const getScan = async (req, res) => {
@@ -100,17 +112,18 @@ const getScan = async (req, res) => {
 
     const userIdsInSameDepartment = usersInSameDepartment.map((user) => user._id);
 
-    // Fetch folders and populate 'files' array within each folder
     const folders = await FolderModel.find({
       $or: [{ uploadedBy: loggedInUserId }, { uploadedBy: { $in: userIdsInSameDepartment } }]
     })
-      .populate({
-        path: 'files', // Assuming 'files' is the array containing individual files
-        select: 'originalname size date', // Select only necessary fields
-      })
       .populate('uploadedBy', 'username department')
+      .populate('files.uploadedBy', 'username department')
       .skip(skip)
       .limit(limit);
+
+    // Calculate file count for each folder
+    folders.forEach(folder => {
+      folder.fileCount = folder.files.length;
+    });
 
     const count = await FolderModel.countDocuments({
       $or: [{ uploadedBy: loggedInUserId }, { uploadedBy: { $in: userIdsInSameDepartment } }]
@@ -119,7 +132,7 @@ const getScan = async (req, res) => {
 
     return res.render('SaveScan', {
       limit,
-      files: folders, // Pass folders data to the template
+      folders,
       currentPage: page,
       totalPages,
       loggedInUserId,
@@ -131,19 +144,23 @@ const getScan = async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+
+
 const getFolderContents = async (req, res) => {
   try {
     const folderId = req.params.folderId;
-    const folder = await FolderModel.findById(folderId).populate('files.uploadedBy', 'username department');
-
+    const folder = await FolderModel.findById(folderId)
+      .populate('uploadedBy', 'username department')
+      .populate('files.uploadedBy', 'username department');
+    // console.log(folder);
     if (!folder) {
-      return res.status(404).json({ error: 'Folder not found' });
+      return res.status(404).render('error', { message: 'Folder not found' });
     }
 
-    return res.json({ folder });
+    res.render('eachFiles.ejs', { folder, formatFileSize });
   } catch (err) {
     console.error('Error fetching folder contents:', err);
-    res.status(500).json({ error: 'Internal Server Error' });
+    res.status(500).render('error', { message: 'Internal Server Error' });
   }
 };
 module.exports = {

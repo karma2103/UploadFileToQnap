@@ -154,6 +154,7 @@ const handleFileUpload = async (req, res) => {
               uploadedBy:userId
             });
           } catch (err) {
+            req.flash('error', `Qnap Device is down, Contact IT Administrator`);
             throw new Error(`Failed to upload ${file.originalname}`);
           }
         }
@@ -163,7 +164,7 @@ const handleFileUpload = async (req, res) => {
           uploadType,
           uploadedBy: userId,
           files: fileData
-        };
+        }; 
 
         await FolderModel.create(folderData);
       };
@@ -172,6 +173,8 @@ const handleFileUpload = async (req, res) => {
         const folderName = req.body.folderName;
         const folderPath = `/${folder}/${folderName}`;
         const files = req.files;
+        console.log(folderPath);
+        
         console.log(files);
         await processFolder(files, folderPath, folderName);
         req.flash('success', 'Folder uploaded successfully!');
@@ -182,12 +185,12 @@ const handleFileUpload = async (req, res) => {
         req.flash('success', 'Files uploaded successfully!');
       }
 
-      res.redirect('/viewSave');
+      res.redirect('/');
     });
   } catch (err) {
     console.error(err);
     req.flash('error', 'Failed to upload files to FTP server.');
-    res.redirect('/upload');
+    res.redirect('/Uploads');
   }
 };
 

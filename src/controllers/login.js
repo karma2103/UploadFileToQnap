@@ -46,7 +46,7 @@ const loginUser = async (req, res, next) => {
 
     req.session.userId = user._id;
     req.flash('success', 'Login successfull!');
-    res.redirect('/');
+    res.redirect('/welcome');
   } catch (error) {
     req.flash('error', 'Error during login.');
     next(error);

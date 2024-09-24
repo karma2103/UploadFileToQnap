@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Folder Contents</title>
   <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
   <style>
     .folder-row i {
       color: #007bff;
@@ -21,7 +22,7 @@
   <div class="container mt-5">
     <div class="row mb-4">
       <div class="col-md-6">
-        <h1 style="font-family: Georgia, 'Times New Roman', Times, serif;">Folder: <%= folder.folderName %></h1>
+        <h1 style="font-family: Georgia, 'Times New Roman', Times, serif;">Folders Files</h1>
       </div>
     </div>
     <div class="table-responsive">
@@ -40,7 +41,11 @@
           <% folder.files.forEach((file, index) => { %>
             <tr class="file-row">
               <td><%= index + 1 %></td>
-              <td><i class="fas fa-file"></i> <%= file.originalname %></td>
+        
+              <td>
+                <i class="<%= getFileIcon(file.originalname) %>"></i> 
+                <a href="/files/<%= file._id %>" target="_blank"><%= file.originalname %></a>
+              </td>
               <td><%= new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(file.date)) %></td>
               <td><%= file.uploadedBy ? file.uploadedBy.username : 'Unknown' %></td>
               <td><%= formatFileSize(file.size) %></td>
@@ -50,7 +55,7 @@
         </tbody>
       </table>
     </div>
-    <a href="/viewSave" class="btn btn-secondary">Back to Main</a>
+    <a href="/" class="btn btn-primary">Back to Main</a>
   </div>
   <script>
     function formatFileSize(size) {

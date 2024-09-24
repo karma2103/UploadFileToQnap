@@ -22,12 +22,13 @@ router.use((req, res, next) => {
 let routes = app => {
   //Auth 
   router.get('/register', homeController.getRegister)
-  router.get("/", requireAuth, homeController.getHome);
+  router.get("/Uploads", requireAuth, homeController.getHome);
   router.get('/login', homeController.getLogin);
   router.get('/welcome', requireAuth, homeController.getWelcome);
   router.post("/multiple-upload", requireAuth, uploadController.multipleUpload);
-  router.get('/viewSave',requireAuth, uploadController.getScan)
+  router.get('/',requireAuth, uploadController.getScan)
   router.get('/folder/:folderId',requireAuth, uploadController.getFolderContents)
+  router.get('/files/:fileId',requireAuth, uploadController.getFileFromQNAP)
   
   //Authentication 
   router.post('/registerUser', LoginController.registerUser)

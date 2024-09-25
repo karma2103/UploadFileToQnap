@@ -34,7 +34,7 @@
     "node-cache": "^5.1.2",
     "nodemon": "^3.1.3",
     "promisify": "^0.0.3",
-    "redis": "^4.6.15",
+    "redis": "^4.7.0",
     "smb2": "^0.2.11",
     "tftp": "^0.1.2",
     "tftp-client": "^0.2.1",

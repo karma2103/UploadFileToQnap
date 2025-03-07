@@ -8,7 +8,7 @@ const homeController = require("../controllers/home");
 const uploadController = require("../controllers/upload");
 const LoginController = require("../controllers/login")
 
-
+router.use(express.json())
 router.use(session({
   secret: process.env.SECRET,
   resave: false,
@@ -29,7 +29,9 @@ let routes = app => {
   router.get('/',requireAuth, uploadController.getScan)
   router.get('/folder/:folderId',requireAuth, uploadController.getFolderContents)
   router.get('/files/:fileId',requireAuth, uploadController.getFileFromQNAP)
-  
+  router.post('/create-folder',requireAuth, uploadController.createFolder)
+  router.get("/checking", requireAuth, uploadController.checkFolder)
+  router.get("/testcheck/loan/:path", requireAuth, uploadController.testCheck)
   //Authentication 
   router.post('/registerUser', LoginController.registerUser)
   router.post('/login', LoginController.loginUser)

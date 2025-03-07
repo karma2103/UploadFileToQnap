@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Folder Contents</title>
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+  
+  <style>
+    .custom-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .custom-dropdown .dropdown-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      z-index: 1000;
+    }
+
+    .custom-dropdown.show .dropdown-menu {
+      display: block;
+    }
+
+    .folder-row i {
+      color: #007bff;
+    }
+
+    .file-row i {
+      color: #6c757d;
+    }
+ 
+    .folder-row i {
+      color: #007bff;
+    }
+
+    .file-row i {
+      color: #6c757d;
+    }
+  </style>
+</head>
+<body>
+  <%- include('./Layouts/Header'); %>
+
+  <div class="container mt-5">
+    <div class="row mb-4">
+      <div class="col-md-6">
+        <h1 style="font-family: Georgia, 'Times New Roman', Times, serif;">Uploaded Files & Folders</h1>
+      </div>
+      <div class="col-md-6 text-right">
+        <div class="input-group">
+          <input type="text" id="searchInput" class="form-control" placeholder="Search...">
+          <div class="input-group-append">
+            <button class="btn btn-primary" onclick="searchFiles()">Search</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row mb-4">
+      <div class="col-md-12 text-right">
+        <div class="custom-dropdown">
+          <button type="button" class="btn btn-secondary dropdown-toggle" aria-haspopup="true" aria-expanded="false"
+            onclick="toggleDropdown('filterDropdown')">
+            Add New
+          </button>
+          <div class="dropdown-menu" id="filterDropdown">
+            <a class="dropdown-item" href="/Uploads">Folder</a>
+            <a class="dropdown-item" href="/Uploads">Files</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <% if (folder.length > 0) { %>
+      <div class="table-responsive">
+          <table class="table table-bordered">
+              <thead class="thead-light">
+                  <tr>
+                      <th>Folder Name</th>
+                      <th>SI No</th>
+                      <th>File Name</th>
+                      <th>Upload Date</th>
+                      <th>Uploaded By</th>
+                      <th>Department</th>
+                      <th>Size</th>
+                  </tr>
+              </thead>
+              <tbody>
+                  <% folder.forEach((folder, folderIndex) => { %>
+                      <tr class="folder-row">
+                          <td rowspan="<%= folder.files.length + 1 %>">
+                              <strong><%= folder.name %></strong>
+                          </td>
+                      </tr>
+  
+                      <% if (folder.files.length > 0) { %>
+                          <% folder.files.forEach((file, fileIndex) => { %>
+                              <tr class="file-row">
+                                  <td><%= fileIndex + 1 %></td>
+                                  <td>
+                                      <i class="<%= getFileIcon(file.originalname) %>"></i>
+                                      <a href="/files/<%= file._id %>" target="_blank"><%= file.originalname %></a>
+                                  </td>
+                                  <td>
+                                      <%= new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(file.date)) %>
+                                  </td>
+                                  <td><%= file.uploadedBy ? file.uploadedBy.username : 'Unknown' %></td>
+                                  <td><%= file.uploadedBy ? file.uploadedBy.department : 'Unknown' %></td>
+                                  <td><%= formatFileSize(file.size) %></td>
+                              </tr>
+                          <% }); %>
+                      <% } else { %>
+                          <tr>
+                              <td colspan="6">No files found in this folder.</td>
+                          </tr>
+                      <% } %>
+                  <% }); %>
+              </tbody>
+          </table>
+      </div>
+  <% } else { %>
+      <p>No folders found.</p>
+  <% } %>
+  
+    <a href="/" class="btn btn-primary">Back to Main</a>
+  </div>
+  <script>
+    function formatFileSize(size) {
+      if (size < 1024) return size + ' B';
+      if (size < 1048576) return (size / 1024).toFixed(1) + ' KB';
+      return (size / 1048576).toFixed(1) + ' MB';
+    }
+    function toggleDropdown(id){
+      const dropdown = document.getElementById(id);
+      dropdown.classList.toggle('show')
+    }
+  </script>
+</body>
+</html>

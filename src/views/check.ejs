@@ -102,76 +102,53 @@
         </div>
       </div>
       <div class="table-responsive">
-        <table class="table table-bordered">
-          <thead class="thead-light">
-            <tr>
-              <th>SI No</th>
-              <th>File Name</th>
-              <th>Upload Date</th>
-              <th>Uploaded By</th>
-              <th>File Size</th>
-              <th>Department</th>
-            </tr>
-          </thead>
-          <tbody id="fileTableBody">
-            <% let currentIndex=(currentPage - 1) * limit + 1; %>
-              <% folders.forEach((folder)=> { %>
-                <% if (folder.uploadType==='Folder' ) { %>
-                  <tr class="folder-row"
-                    data-type="<%= folder.uploadedBy && folder.uploadedBy._id.toString() === loggedInUserId ? 'individual' : 'department' %>">
-                    <td>
-                      <%= currentIndex %>
-                    </td>
-                    <td><i class="fas fa-folder"></i> <a href="/folder/<%= folder._id %>">
-                        <%= folder.folderName %>
-                      </a></td>
-                    <td>
-                      <%= new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' , timeStyle: 'short' }).format(new
-                        Date(folder.date)) %>
-                    </td>
-                    <td>
-                      <%= folder.uploadedBy ? folder.uploadedBy.username : 'Unknown' %>
-                    </td>
-                    <td>
-                      <%= folder.fileCount %> items
-                    </td>
-                    <td>
-                      <%= folder.uploadedBy ? folder.uploadedBy.department : 'Unknown' %>
-                    </td>
-                  </tr>
-                  <% currentIndex++; %>
-                    <% } else { %>
-                      <% folder.files.forEach((file)=> { %>
-                        <tr class="file-row"
-                          data-type="<%= file.uploadedBy && file.uploadedBy._id.toString() === loggedInUserId ? 'individual' : 'department' %>">
-                          <td>
-                            <%= currentIndex %>
-                          </td>
-                          <td>
-                            <i class="<%= getFileIcon(file.originalname) %>"></i>
-                            <a href="/files/<%= file._id %>" target="_blank">
-                              <%= file.originalname %>
-                            </a>
-                          </td>
-                          <td>
-                            <%= new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' , timeStyle: 'short'
-                              }).format(new Date(file.date)) %>
-                          </td>
-                          <td>
-                            <%= file.uploadedBy ? file.uploadedBy.username : 'Unknown' %>
-                          </td>
-                          <td>
-                            <%= formatFileSize(file.size) %>
-                          </td>
-                          <td>
-                            <%= file.uploadedBy ? file.uploadedBy.department : 'Unknown' %>
-                          </td>
-                        </tr>
-                        <% currentIndex++; %>
-                          <% }); %>
-                            <% } %>
-                              <% }); %>
-          </tbody>
+        <table class="table table-bordered">    
+            <% if (folders.length > 0) { %>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="thead-light">
+                            <tr class="folder-row">
+                                <th>SI No</th>
+                                <th>File Name</th>
+                                <th>Upload Date</th>
+                                <th>Uploaded By</th>
+                                <th>Department</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% folders.forEach((folder, index) => { %>
+                                <tr>
+                                    <td ><%= index + 1 %></td>
+                                    <td><i class="fas fa-folder"></i> <a href="/testcheck/<%= folder.path %>">
+                                        <%= folder.folderName %>
+                                      </a></td>
+                                    
+                                    <td><%= folder.createdAt ? folder.createdAt.toDateString() : 'N/A' %></td>
+                                    <td><%= folder.createdBy.username %></td>
+                                    <td><%= folder.department || 'N/A' %></td>
+                                </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+        
+                <!-- Pagination -->
+                <div class="pagination">
+                    <% if (currentPage > 1) { %>
+                        <a href="?page=<%= currentPage - 1 %>&limit=<%= limit %>">Previous</a>
+                    <% } %>
+                    
+                    Page <%= currentPage %> of <%= totalPages %>
+                    
+                    <% if (currentPage < totalPages) { %>
+                        <a href="?page=<%= currentPage + 1 %>&limit=<%= limit %>">Next</a>
+                    <% } %>
+                </div>
+            <% } else { %>
+                <p>No folders found.</p>
+            <% } %>
+            
+            <a href="/upload">Go Back</a>
 
 
         </table>

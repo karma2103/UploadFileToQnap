@@ -6,18 +6,18 @@ const ftp = require('basic-ftp');
 const fs = require('fs');
 const { Readable } = require('stream');
 require('dotenv').config()
-
+const Folder = require("../model/folder")
 
 const ftpCredentials = {
-  finance: {
+  Finance: {
     host: process.env.FTP_HOST_FINANCE,
     user: process.env.FTP_USER_FINANCE,
     password: process.env.FTP_PASSWORD_FINANCE,
   },
-  underwriting: {
-    host: process.env.FTP_HOST_UNDERWRITING,
-    user: process.env.FTP_USER_UNDERWRITING,
-    password: process.env.FTP_PASSWORD_UNDERWRITING,
+  Insurance: {
+    host: process.env.FTP_HOST_INSURANCE,
+    user: process.env.FTP_USER_INSURANCE,
+    password: process.env.FTP_PASSWORD_INSURANCE,
   },
   loan: {
     host: process.env.FTP_HOST_LOAN,
@@ -185,21 +185,19 @@ const getFileFromQNAP = async (req, res) => {
     const file = folder.files.id(fileId);
     if (!file) return res.status(404).send('File not found');
 
-    // Use the original name to construct the file path on QNAP
-    const remoteFilePath = `${department}/${file.originalname}`.trim(); // Adjust the path as necessary
+    // Construct file path on QNAP
+    const remoteFilePath = `/${department}/${file.originalname}`.trim();
 
-    console.log(`Attempting to download file from path: ${remoteFilePath}`);
+    console.log(`Downloading file: ${remoteFilePath}`);
 
     // Create FTP client and download file
     const client = new ftp.Client();
     await client.access(ftpConfig);
 
-    // Set the response headers
     res.setHeader('Content-Disposition', `attachment; filename="${file.originalname}"`);
     res.setHeader('Content-Type', file.mimetype || 'application/octet-stream');
 
-    // Stream the file from QNAP to the response
-    client.downloadTo(res, remoteFilePath)
+    await client.downloadTo(res, remoteFilePath)
       .then(() => {
         console.log('File downloaded successfully');
         client.close();
@@ -207,24 +205,156 @@ const getFileFromQNAP = async (req, res) => {
       .catch(err => {
         console.error('Error downloading file:', err);
         client.close();
-        if (!res.headersSent) {
-          res.status(500).send('Error downloading file');
-        }
+        if (!res.headersSent) res.status(500).send('Error downloading file');
       });
 
   } catch (err) {
     console.error('Error retrieving file:', err);
-    if (!res.headersSent) {
-      res.status(500).send('Internal Server Error');
+    if (!res.headersSent) res.status(500).send('Internal Server Error');
+  }
+};
+
+const createFolder = async (req, res) => {
+  const client = new ftp.Client();
+  client.ftp.verbose = true;
+
+  try {
+    if (!req.body || !req.body.folderName) {
+      return res.status(400).json({ error: "Folder name is required." });
     }
+
+    const { folderName } = req.body;
+
+    // Sanitize folder name
+    const sanitizeFolderName = (name) => name.replace(/[\\/:*?"<>|]/g, '').trim();
+    const sanitizedFolderName = sanitizeFolderName(folderName);
+
+    if (!sanitizedFolderName) {
+      return res.status(400).json({ error: "Invalid folder name." });
+    }
+
+    const loggedInUserId = req.session.userId;
+    if (!loggedInUserId) {
+      return res.status(401).json({ error: "Unauthorized: User not logged in." });
+    }
+
+    const user = await UserModel.findById(loggedInUserId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    const department = user.department;
+    const ftpConfig = ftpCredentials[department];
+    if (!ftpConfig) {
+      return res.status(404).json({ error: "Department not configured." });
+    }
+
+    await client.access(ftpConfig);
+
+    // Ensure the directory exists
+    const folderPath = `/${department}/${sanitizedFolderName}`;
+    await client.ensureDir(folderPath);
+
+    console.log(`✅ Folder '${sanitizedFolderName}' created successfully in ${department}.`);
+
+    // Save folder in MongoDB
+    const newFolder = new Folder({
+      folderName: sanitizedFolderName,
+      createdBy: loggedInUserId,
+      department,
+      path: folderPath,
+    });
+
+    await newFolder.save();
+
+    res.status(201).json({
+      message: `Folder '${sanitizedFolderName}' created successfully.`,
+      folderId: newFolder._id,
+      folderPath,
+    });
+
+  } catch (err) {
+    console.error("❌ Error creating folder:", err);
+    res.status(500).json({ error: "Failed to create folder.", details: err.message });
+  } finally {
+    client.close();
   }
 };
 
 
+//testing
+const checkFolder = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const loggedInUserId = req.session.userId;
+    const user = await UserModel.findById(loggedInUserId);
+    if (!user) {
+      req.flash('error', 'User not found.');
+      return res.redirect('/upload');
+    }
+ 
+
+    const folders = await Folder.find({
+      $or: [{ createdBy: loggedInUserId }]
+    })
+      .populate('createdBy', 'username ')
+      .skip(skip)
+      .limit(limit);
+
+    
+
+    const count = await FolderModel.countDocuments({
+      $or: [{ createdBy: loggedInUserId }]
+    });
+    const totalPages = Math.ceil(count / limit);
+
+    return res.render('check', {
+      limit,
+      folders,
+      currentPage: page,
+      totalPages,
+      loggedInUserId,
+      user
+    });
+  } catch (err) {
+    console.error('Error fetching files:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+  const testCheck = async (req, res) => {
+    try {
+      let folderPath = req.params.path;
+  
+      // Decode URL-encoded path (in case of special characters like "%2F")
+      folderPath = decodeURIComponent(folderPath);
+  
+      // Find folder by path
+      const folder = await Folder.findOne({ path: folderPath });
+  
+      if (!folder) {
+        return res.status(404).json({ error: 'Folder not found.' });
+      }
+  
+      res.status(200).json({
+        message: 'Folder found',
+        folder
+      });
+    } catch (err) {
+      console.error('Error fetching folder:', err);
+      res.status(500).json({ error: 'Internal server error.' });
+    }
+  };
 
 module.exports = {
   multipleUpload,
   getScan,
   getFolderContents,
   getFileFromQNAP,
+  createFolder,
+  checkFolder,
+  testCheck
 };

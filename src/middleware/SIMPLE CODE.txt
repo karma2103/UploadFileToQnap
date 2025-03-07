@@ -1,0 +1,467 @@
+
+const express = require('express');
+const multer = require('multer');
+const ftp = require('basic-ftp');
+const mongoose = require('mongoose');
+const FolderModel = require('../model/File'); 
+const UserModel = require('../model/users'); 
+const { Readable } = require('stream');
+require('dotenv').config(); 
+
+const app = express();
+
+// Mongo URI from environment variables
+const mongoURI = process.env.MONGODB_URI;
+
+// Connect to MongoDB
+mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log('MongoDB connected successfully.'))
+  .catch((err) => console.error('MongoDB connection error:', err));
+
+// Multer configuration
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    // List of accepted MIME types
+    const acceptedMimeTypes = [
+      'application/pdf',
+      'application/msword', // .doc
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+      'application/vnd.ms-excel', // .xls
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'image/jpeg', // .jpg, .jpeg
+      'image/png', // .png
+      'image/gif' // .gif
+    ];
+
+    if (!acceptedMimeTypes.includes(file.mimetype)) {
+      cb(new Error(`${file.originalname} is invalid. Only accept PDF, Word, Excel, and image files.`), false);
+    } else {
+      cb(null, true);
+    }
+  }
+}).any(); // Accept any files including those inside the folder
+
+// Define FTP credentials for each department
+const ftpCredentials = {
+  finance: {
+    host: process.env.FTP_HOST_FINANCE,
+    user: process.env.FTP_USER_FINANCE,
+    password: process.env.FTP_PASSWORD_FINANCE,
+  },
+  underwriting: {
+    host: process.env.FTP_HOST_UNDERWRITING,
+    user: process.env.FTP_USER_UNDERWRITING,
+    password: process.env.FTP_PASSWORD_UNDERWRITING,
+  },
+  loan: {
+    host: process.env.FTP_HOST_LOAN,
+    user: process.env.FTP_USER_LOAN,
+    password: process.env.FTP_PASSWORD_LOAN,
+  },
+  ppf_gf: {
+    host: process.env.FTP_HOST_PPF_GF,
+    user: process.env.FTP_USER_PPF_GF,
+    password: process.env.FTP_PASSWORD_PPF_GF,
+  }
+};
+
+const uploadFileToFTP = async (fileStream, remoteFileName, department) => {
+  const client = new ftp.Client();
+  try {
+    const credentials = ftpCredentials[department];
+
+    await client.access(credentials);
+
+    const remoteDir = remoteFileName.substring(0, remoteFileName.lastIndexOf('/'));
+
+    // Ensure the directory exists
+    await client.ensureDir(remoteDir);
+    await client.uploadFrom(fileStream, remoteFileName);
+
+    console.log(`File uploaded to ${remoteFileName}`);
+    return `File uploaded to ${remoteFileName}`;
+  } catch (err) {
+    console.error(`Failed to upload ${remoteFileName}:`, err);
+    throw new Error(`Failed to upload ${remoteFileName}`);
+  } finally {
+    client.close();
+  }
+};
+
+const handleFileUpload = async (req, res) => {
+  try {
+    upload(req, res, async (err) => {
+      if (err) {
+        console.error('Multer error:', err);
+        req.flash('error', `Error uploading files: ${err.message}`);
+        return res.redirect('/upload');
+      }
+
+      const uploadType = req.body.uploadType;
+
+      if (!uploadType) {
+        req.flash('error', 'Upload type is missing.');
+        return res.redirect('/upload');
+      }
+
+      const userId = req.session.userId;
+      const user = await UserModel.findById(userId); 
+      if (!user) {
+        req.flash('error', 'User not found.');
+        return res.redirect('/upload');
+      }
+
+      const department = user.department;
+      let folder = '';
+
+      switch (department) {
+        case 'finance':
+          folder = 'finance';
+          break;
+        case 'underwriting':
+          folder = 'underwriting';
+          break;
+        case 'loan':
+          folder = 'loan';
+          break;
+        case 'ppf_gf':
+          folder = 'ppf_gf';
+          break;
+        default:
+          folder = 'default';
+          break;
+      }
+
+      const processFolder = async (files, parentPath, folderName) => {
+        if (!files || files.length === 0) {
+          throw new Error('No files to process.');
+        }
+
+        const fileData = [];
+
+        for (const file of files) {
+          const remoteFileName = `${parentPath}/${file.originalname}`;
+          try {
+            const fileStream = Readable.from(file.buffer);
+            await uploadFileToFTP(fileStream, remoteFileName, department);
+
+            fileData.push({
+              originalname: file.originalname,
+              mimetype: file.mimetype,
+              size: file.size,
+              path: remoteFileName,
+              uploadedBy:userId
+            });
+          } catch (err) {
+            req.flash('error', `Qnap Device is down, Contact IT Administrator`);
+            throw new Error(`Failed to upload ${file.originalname}`);
+          }
+        }
+
+        const folderData = {
+          folderName,
+          uploadType,
+          uploadedBy: userId,
+          files: fileData
+        }; 
+
+        await FolderModel.create(folderData);
+      };
+
+      if (uploadType === 'Folder') {
+        const folderName = req.body.folderName;
+        const folderPath = `/${folder}/${folderName}`;
+        const files = req.files;
+        console.log(folderPath);
+        
+        console.log(files);
+        await processFolder(files, folderPath, folderName);
+        req.flash('success', 'Folder uploaded successfully!');
+      } else {
+        const files = req.files;
+        console.log(files);
+        await processFolder(files, `/${folder}`, ''); // Empty string for folder name if it's not a folder upload
+        req.flash('success', 'Files uploaded successfully!');
+      }
+
+      res.redirect('/');
+    });
+  } catch (err) {
+    console.error(err);
+    req.flash('error', 'Failed to upload files to FTP server.');
+    res.redirect('/Uploads');
+  }
+};
+
+
+module.exports = handleFileUpload;
+
+simple code 2
+const ftpCredentials = {
+  qnap1: {
+    finance: {
+      host: process.env.FTP_HOST_FINANCE,
+      user: process.env.FTP_USER_FINANCE,
+      password: process.env.FTP_PASSWORD_FINANCE,
+    },
+  },
+  qnap2: {
+    underwriting: {
+      host: process.env.FTP_HOST_UNDERWRITING,
+      user: process.env.FTP_USER_UNDERWRITING,
+      password: process.env.FTP_PASSWORD_UNDERWRITING,
+    },
+  },
+  qnap3: {
+    loan: {
+      host: process.env.FTP_HOST_LOAN,
+      user: process.env.FTP_USER_LOAN,
+      password: process.env.FTP_PASSWORD_LOAN,
+    },
+    ppf_gf: {
+      host: process.env.FTP_HOST_PPF_GF,
+      user: process.env.FTP_USER_PPF_GF,
+      password: process.env.FTP_PASSWORD_PPF_GF,
+    },
+  }
+};
+ simple Code 3
+ const express = require('express');
+const multer = require('multer');
+const ftp = require('basic-ftp');
+const mongoose = require('mongoose');
+const FolderModel = require('../model/File');
+const UserModel = require('../model/users');
+const { Readable } = require('stream');
+require('dotenv').config();
+
+const app = express();
+
+// MongoDB Connection
+const mongoURI = process.env.MONGODB_URI;
+mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log('MongoDB connected successfully.'))
+  .catch((err) => console.error('MongoDB connection error:', err));
+
+// Multer Configuration (for memory storage)
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    const acceptedMimeTypes = [
+      'application/pdf', 'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'image/jpeg', 'image/png', 'image/gif'
+    ];
+
+    if (!acceptedMimeTypes.includes(file.mimetype)) {
+      cb(new Error(`${file.originalname} is invalid. Only accept PDF, Word, Excel, and image files.`), false);
+    } else {
+      cb(null, true);
+    }
+  }
+}).any(); // Accept multiple files
+
+// Define FTP Credentials for the Insurance Department
+const ftpCredentials = {
+  qnap1: {
+    finance: {
+      host: process.env.FTP_HOST_FINANCE,
+      user: process.env.FTP_USER_FINANCE,
+      password: process.env.FTP_PASSWORD_FINANCE,
+    },
+  },
+  qnap2: {
+    underwriting: {
+      host: process.env.FTP_HOST_UNDERWRITING,
+      user: process.env.FTP_USER_UNDERWRITING,
+      password: process.env.FTP_PASSWORD_UNDERWRITING,
+    },
+  },
+  qnap3: {
+    loan: {
+      host: process.env.FTP_HOST_LOAN,
+      user: process.env.FTP_USER_LOAN,
+      password: process.env.FTP_PASSWORD_LOAN,
+    },
+    ppf_gf: {
+      host: process.env.FTP_HOST_PPF_GF,
+      user: process.env.FTP_USER_PPF_GF,
+      password: process.env.FTP_PASSWORD_PPF_GF,
+    },
+  }
+};
+
+// Function to Get FTP Credentials for Insurance
+const getInsuranceQnapCredentials = () => {
+  return ftpCredentials.qnap2;
+};
+
+// Function to Check and Create Section Folder for Insurance Department
+const checkAndCreateSectionFolder = async (section) => {
+  const client = new ftp.Client();
+  
+  try {
+    // Step 1: Get FTP credentials for insurance department
+    const insuranceServer = getInsuranceQnapCredentials();
+    
+    // Step 2: Connect to the FTP server
+    await client.access(insuranceServer);
+    
+    // Step 3: Define root folder for insurance department
+    const insuranceRoot = '/underwriting';
+    
+    // Step 4: Define the section folder path (e.g., /insurance/underwriting)
+    const sectionPath = `${insuranceRoot}/${section}`;
+    
+    // Step 5: Check if the section folder exists
+    console.log(`Checking if section folder exists: ${sectionPath}`);
+    
+    try {
+      // Try to change to the section directory
+      await client.cd(sectionPath);
+      console.log(`📁 Folder already exists: ${sectionPath}`);
+    } catch (err) {
+      if (err.code === 550) {
+        // Folder does not exist, so create it
+        console.log(`❌ Folder does not exist. Creating folder: ${sectionPath}`);
+        await client.ensureDir(sectionPath);
+        console.log(`✅ Folder created: ${sectionPath}`);
+      } else {
+        throw err; // Throw if error is not 550 (directory does not exist)
+      }
+    }
+
+    // Step 6: Return the path of the section folder for file upload
+    return sectionPath;
+
+  } catch (err) {
+    console.error(`❌ Failed to create or find section folder: ${err}`);
+    throw new Error(`Failed to create or find section folder: ${err}`);
+  } finally {
+    // Always close the FTP client
+    client.close();
+  }
+};
+
+// Function to Upload Files to FTP (Insurance QNAP)
+const uploadFileToFTP = async (fileStream, remoteFileName, section) => {
+  const client = new ftp.Client();
+  try {
+    // Step 1: Check and create section folder if needed
+    const sectionPath = await checkAndCreateSectionFolder(section);
+
+    // Step 2: Upload the file to the section folder
+    const insuranceServer = getInsuranceQnapCredentials();
+    await client.access(insuranceServer);
+    
+    // Full path for the remote file to upload
+    const fullRemotePath = `${sectionPath}/${remoteFileName}`;
+
+    // Upload the file
+    await client.uploadFrom(fileStream, fullRemotePath);
+    console.log(`✅ File uploaded successfully to: ${fullRemotePath}`);
+
+  } catch (err) {
+    console.error(`❌ Failed to upload file: ${err}`);
+    throw new Error(`Failed to upload file: ${err}`);
+  } finally {
+    // Always close the FTP client
+    client.close();
+  }
+};
+
+// Handle File Upload
+const handleFileUpload = async (req, res) => {
+  try {
+    upload(req, res, async (err) => {
+      if (err) {
+        console.error('❌ Multer error:', err);
+        req.flash('error', `Error uploading files: ${err.message}`);
+        return res.redirect('/upload');
+      }
+
+      const uploadType = req.body.uploadType;
+      if (!uploadType) {
+        req.flash('error', 'Upload type is missing.');
+        return res.redirect('/upload');
+      }
+
+      // Fetch User Details
+      const userId = req.session.userId;
+      const user = await UserModel.findById(userId);
+      if (!user) {
+        req.flash('error', 'User not found.');
+        return res.redirect('/upload');
+      }
+
+      const department = user.department;
+      const section = req.body.section; // Use section from form input (underwriting, claims, etc.)
+
+      // Process Folder and Upload Files
+      const processFolder = async (files, parentPath, folderName) => {
+        if (!files || files.length === 0) throw new Error('No files to process.');
+
+        const fileData = [];
+
+        for (const file of files) {
+          const remoteFileName = `${parentPath}/${file.originalname}`;
+          try {
+            const fileStream = Readable.from(file.buffer);
+            await uploadFileToFTP(fileStream, remoteFileName, section); // Upload to correct section of insurance department
+
+            fileData.push({
+              originalname: file.originalname,
+              mimetype: file.mimetype,
+              size: file.size,
+              path: remoteFileName,
+              uploadedBy: userId
+            });
+          } catch (err) {
+            req.flash('error', `QNAP Device is down, Contact IT Administrator`);
+            throw new Error(`Failed to upload ${file.originalname}`);
+          }
+        }
+
+        // Save Folder & File Data to MongoDB
+        const folderData = {
+          folderName,
+          uploadType,
+          uploadedBy: userId,
+          files: fileData
+        };
+
+        await FolderModel.create(folderData);
+      };
+
+      // Upload Folder or Individual Files
+      if (uploadType === 'Folder') {
+        const folderName = req.body.folderName;
+        const folderPath = `/insurance/${folderName}`;
+        const files = req.files;
+
+        console.log(`📁 Uploading folder to: ${folderPath}`);
+        console.log(files);
+        await processFolder(files, folderPath, folderName);
+        req.flash('success', 'Folder uploaded successfully!');
+      } else {
+        const files = req.files;
+        console.log(`📄 Uploading files to: /insurance/${section}`);
+        console.log(files);
+        await processFolder(files, `/insurance/${section}`, '');
+        req.flash('success', 'Files uploaded successfully!');
+      }
+
+      res.redirect('/');
+    });
+  } catch (err) {
+    console.error(err);
+    req.flash('error', 'Failed to upload files to FTP server.');
+    res.redirect('/Uploads');
+  }
+};
+
+module.exports = handleFileUpload;

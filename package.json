@@ -28,7 +28,7 @@
     "flash": "^1.1.0",
     "ftp": "^0.3.10",
     "gridfs-stream": "^1.1.1",
-    "mongoose": "^8.4.1",
+    "mongoose": "^8.9.5",
     "multer": "^1.4.4",
     "multer-gridfs-storage": "^5.0.2",
     "node-cache": "^5.1.2",
